@@ -9,23 +9,21 @@ const path = require('path');
 const app = express();
 let browser;
 
-
 app.use(express.static(path.join(__dirname, 'public')));
 
 async function initializeBrowser(proxyPort) {
-    const { stdout: chromiumPath } = await promisify(exec)("which chromium");
     return puppeteer.launch({
-        headless: false,
-        executablePath: chromiumPath.trim(),
-        ignoreHTTPSErrors: true,
         args: [
-            '--ignore-certificate-errors',
-            '--disable-gpu',
-            '--disable-software-rasterizer',
-            '--disable-dev-shm-usage',
-            '--no-sandbox',
+            "--disable-setuid-sandbox",
+            "--no-sandbox",
+            "--single-process",
+            "--no-zygote",
             `--proxy-server=127.0.0.1:${proxyPort}`
-        ]
+        ],
+        executablePath:
+            process.env.NODE_ENV === "production"
+                ? process.env.PUPPETEER_EXECUTABLE_PATH
+                : puppeteer.executablePath()
     });
 }
 
@@ -80,7 +78,6 @@ async function loginToFacebook(email, password, proxyPort) {
         value: cookie.value
     }));
 
-    
     const datrCookie = cookies.find(cookie => cookie.name === 'datr') || {};
     const responseWithDatr = {
         cookies: cookieString,
