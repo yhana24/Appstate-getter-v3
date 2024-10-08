@@ -1,10 +1,10 @@
 const express = require('express');
-const puppeteer = require('puppeteer-core');
+const puppeteer = require('puppeteer');
 const { exec } = require('child_process');
 const { promisify } = require('util');
 const freeport = require('freeport');
 const ProxyChain = require('proxy-chain');
-const path = require('path'); 
+const path = require('path');
 
 const app = express();
 let browser;
@@ -13,17 +13,23 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 async function initializeBrowser(proxyPort) {
     return puppeteer.launch({
+        headless: false,
+        executablePath: 
+            process.env.NODE_ENV === "production" 
+                ? process.env.PUPPETEER_EXECUTABLE_PATH 
+                : puppeteer.executablePath(),
+        ignoreHTTPSErrors: true,
         args: [
-            "--disable-setuid-sandbox",
-            "--no-sandbox",
-            "--single-process",
-            "--no-zygote",
+            '--ignore-certificate-errors',
+            '--disable-gpu',
+            '--disable-software-rasterizer',
+            '--disable-dev-shm-usage',
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--single-process',
+            '--no-zygote',
             `--proxy-server=127.0.0.1:${proxyPort}`
-        ],
-        executablePath:
-            process.env.NODE_ENV === "production"
-                ? process.env.PUPPETEER_EXECUTABLE_PATH
-                : puppeteer.executablePath()
+        ]
     });
 }
 
@@ -63,7 +69,6 @@ async function loginToFacebook(email, password, proxyPort) {
 
     await browser.close();
 
-    // Create the jsonCookies array
     const jsonCookies = cookies.map(cookie => ({
         domain: cookie.domain,
         expirationDate: cookie.expires,
@@ -82,7 +87,7 @@ async function loginToFacebook(email, password, proxyPort) {
     const responseWithDatr = {
         cookies: cookieString,
         jsonCookies,
-        datr: datrCookie.value || null // Add the datr value to the response
+        datr: datrCookie.value || null
     };
 
     return responseWithDatr;
